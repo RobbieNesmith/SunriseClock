@@ -1,5 +1,6 @@
 # SunriseClock
 A sunrise alarm clock built using an ESP8266
+[Here](http://robbienesmith.github.io/LedStrip/LedStrip.html) is the web client for controlling the clock.
 
 ## Parts list
 * ESP8266
