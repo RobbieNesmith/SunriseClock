@@ -157,11 +157,20 @@ def main():
               manual_color.b = 0
               qp = get_query_params(addr)
               if b"red" in qp:
-                manual_color.r = int(qp[b"red"])
+                try:
+                  manual_color.r = int(qp[b"red"])
+                except ValueError:
+                  pass
               if b"green" in qp:
-                manual_color.g = int(qp[b"green"])
+                try:
+                  manual_color.g = int(qp[b"green"])
+                except ValueError:
+                  pass
               if b"blue" in qp:
-                manual_color.b = int(qp[b"blue"])
+                try:
+                  manual_color.b = int(qp[b"blue"])
+                except ValueError:
+                  pass
               cmd = bytearray([manual_color.r, manual_color.g, manual_color.b])
               i2c.writeto(8, cmd)
               send_ok(client)
