@@ -91,6 +91,17 @@ def send_ok(client, message="200 OK", headers=[]):
 def color_to_hex(color):
   return "#%02x%02x%02x" % (color.r, color.g, color.b)
 
+def get_query_params(addr):
+  query_params = {}
+  if b"?" in addr:
+    query = addr.split(b"?")[1]
+    queries = query.split(b"&")
+    for q in queries:
+      kv = q.split(b"=")
+      if len(kv) == 2:
+        query_params[kv[0]] = kv[1]
+  return query_params
+
 def main():
   i2c = I2C(sda=Pin(4), scl=Pin(5))
   i2c.writeto(8, bytearray([0,0,0]))
@@ -141,27 +152,25 @@ def main():
             addr = http.split(b" ")[1]
             if addr.startswith(b"/manual"):
               state = MANUAL_MODE
-              if b"?" in addr:
-                query = addr.split(b"?")[1]
-                queries = query.split(b"&")
-                for q in queries:
-                  kv = q.split(b"=")
-                  if len(kv) == 2:
-                    if kv[0] == b"red":
-                      if len(kv) > 1:
-                        manual_color.r = int(kv[1])
-                      else:
-                        manual_color.r = 0
-                    elif kv[0] == b"green":
-                      if len(kv) > 1:
-                        manual_color.g = int(kv[1])
-                      else:
-                        manual_color.g = 0
-                    elif kv[0] == b"blue":
-                      if len(kv) > 1:
-                        manual_color.b = int(kv[1])
-                      else:
-                        manual_color.b = 0
+              manual_color.r = 0
+              manual_color.g = 0
+              manual_color.b = 0
+              qp = get_query_params(addr)
+              if b"red" in qp:
+                try:
+                  manual_color.r = int(qp[b"red"])
+                except ValueError:
+                  pass
+              if b"green" in qp:
+                try:
+                  manual_color.g = int(qp[b"green"])
+                except ValueError:
+                  pass
+              if b"blue" in qp:
+                try:
+                  manual_color.b = int(qp[b"blue"])
+                except ValueError:
+                  pass
               cmd = bytearray([manual_color.r, manual_color.g, manual_color.b])
               i2c.writeto(8, cmd)
               send_ok(client)
