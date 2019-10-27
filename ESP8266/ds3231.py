@@ -34,17 +34,15 @@ def getYear(i2c):
   return _bcd_to_dec(i2c.readfrom(CLOCK_ADDRESS, 1)[0])
 
 def setSecond(i2c, second):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x00]))
-  i2c.write(_dec_to_bcd(second))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x00, bytes([_dec_to_bcd(second)]))
 
 def setMinute(i2c, minute):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x01]))
-  i2c.write(_dec_to_bcd(minute))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x01, bytes([_dec_to_bcd(minute)]))
 
 def setHour(i2c, hour):
   i2c.writeto(CLOCK_ADDRESS, bytes([0x02]))
   h12 = i2c.readfrom(CLOCK_ADDRESS, 1)[0] & 0b01000000
-  
+
   if h12:
     if hour > 12:
       hour = _dec_to_bcd((hour - 12) | 0b01100000)
@@ -52,25 +50,20 @@ def setHour(i2c, hour):
       hour = _dec_to_bcd(hour) & 0b11011111
   else:
     hour = _dec_to_bcd(hour) & 0b10111111
-  
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x02]))
-  i2c.writeto(CLOCK_ADDRESS, hour)
+
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x02, bytes([hour]))
   
 def setDow(i2c, dow):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x03]))
-  i2c.writeto(CLOCK_ADDRESS, _dec_to_bcd(dow))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x03, bytes([_dec_to_bcd(dow)]))
 
 def setDate(i2c, date):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x04]))
-  i2c.writeto(CLOCK_ADDRESS, _dec_to_bcd(date))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x04, bytes([_dec_to_bcd(date)]))
 
 def setMonth(i2c, month):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x05]))
-  i2c.writeto(CLOCK_ADDRESS, _dec_to_bcd(month))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x05, bytes([_dec_to_bcd(month)]))
 
 def setYear(i2c, year):
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x06]))
-  i2c.writeto(CLOCK_ADDRESS, _dec_to_bcd(year))
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x06, bytes([_dec_to_bcd(year)]))
 
 def setClockMode(i2c, h12):
   i2c.writeto(CLOCK_ADDRESS, bytes([0x02]))
@@ -80,8 +73,7 @@ def setClockMode(i2c, h12):
   else:
     temp = temp & 0b10111111
   
-  i2c.writeto(CLOCK_ADDRESS, bytes([0x02]))
-  i2c.writeto(CLOCK_ADDRESS, temp)
+  i2c.writeto_mem(CLOCK_ADDRESS, 0x02, temp)
 
 def _bcd_to_dec(val):
 # Convert binary coded decimal to normal decimal numbers
