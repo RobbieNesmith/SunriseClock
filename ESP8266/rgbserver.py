@@ -89,7 +89,7 @@ def send_ok(client, message="200 OK", headers=[]):
   client.send(message)
 
 def color_to_hex(color):
-  return "#%02x%02x%02x" % (color.r, color.g, color.b)
+  return "#%02x%02x%02x" % (int(color.r), int(color.g), int(color.b))
 
 def get_query_params(addr):
   query_params = {}
@@ -186,10 +186,51 @@ def main():
               elif state == WAITING_FOR_FADE:
                 color = "#000000"
               elif state == FADING:
-                color = get_current_color(timer, cur_fade)
+                color = color_to_hex(get_current_color(timer, cur_fade))
               send_ok(client, color)
             elif addr.startswith(b"/getmanualcolor"):
               send_ok(client, message=color_to_hex(manual_color))
+            elif addr.startswith(b"/getdatetime"):
+              year = getYear(i2c)
+              month = getMonth(i2c)
+              day = getDate(i2c)
+              hour = getHour(i2c)
+              minute = getMinute(i2c)
+              second = getSecond(i2c)
+              send_ok(client, message="%04d-%02d-%02dT%02d:%02d:%02d" % (2000 + year, month, day, hour, minute, second))
+            elif addr.startswith(b"/setdatetime"):
+              new_datetime = get_query_params(addr)
+              if b"year" in new_datetime:
+                try:
+                  setYear(i2c, int(new_datetime[b"year"]))
+                except ValueError:
+                  pass
+              if b"month" in new_datetime:
+                try:
+                  setMonth(i2c, int(new_datetime[b"month"]))
+                except ValueError:
+                  pass
+              if b"day" in new_datetime:
+                try:
+                  setDate(i2c, int(new_datetime[b"day"]))
+                except ValueError:
+                  pass
+              if b"hour" in new_datetime:
+                try:
+                  setHour(i2c, int(new_datetime[b"hour"]))
+                except ValueError:
+                  pass
+              if b"minute" in new_datetime:
+                try:
+                  setMinute(i2c, int(new_datetime[b"minute"]))
+                except ValueError:
+                  pass
+              if b"second" in new_datetime:
+                try:
+                  setSecond(i2c, int(new_datetime[b"second"]))
+                except ValueError:
+                  pass
+              send_ok(client)
             else:
               send_ok(client, "Hello %d<br />You requested %s" % (utime.ticks_cpu(), addr.decode()))
           client.close()
