@@ -190,6 +190,12 @@ def main():
               send_ok(client, color)
             elif addr.startswith(b"/getmanualcolor"):
               send_ok(client, message=color_to_hex(manual_color))
+            elif addr.startswith(b"/getdow"):
+              send_ok(client, message="%d" % (getDoW(i2c)))
+            elif addr.startswith(b"/setdow"):
+              qp = get_query_parms(addr)
+              if b"dow" in qp:
+                setDow(i2c, int(qp)[b"dow"])
             elif addr.startswith(b"/getdatetime"):
               year = getYear(i2c)
               month = getMonth(i2c)
