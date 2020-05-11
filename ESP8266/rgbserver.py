@@ -193,9 +193,10 @@ def main():
             elif addr.startswith(b"/getdow"):
               send_ok(client, message="%d" % (getDow(i2c)))
             elif addr.startswith(b"/setdow"):
-              qp = get_query_parms(addr)
+              qp = get_query_params(addr)
               if b"dow" in qp:
-                setDow(i2c, int(qp)[b"dow"])
+                setDow(i2c, int(qp[b"dow"]))
+                send_ok(client)
             elif addr.startswith(b"/getdatetime"):
               year = getYear(i2c)
               month = getMonth(i2c)
