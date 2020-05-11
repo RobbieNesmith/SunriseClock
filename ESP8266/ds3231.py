@@ -17,7 +17,7 @@ def getHour(i2c):
   i2c.writeto(CLOCK_ADDRESS, bytes([0x02]))
   return _bcd_to_dec(i2c.readfrom(CLOCK_ADDRESS, 1)[0] & 0b00111111)
 
-def getDoW(i2c):
+def getDow(i2c):
   i2c.writeto(CLOCK_ADDRESS, bytes([0x03]))
   return _bcd_to_dec(i2c.readfrom(CLOCK_ADDRESS, 1)[0])
 
