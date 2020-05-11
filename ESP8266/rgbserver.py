@@ -246,8 +246,9 @@ def main():
     #background tasks
     if state == WAITING_FOR_FADE:
       current_time = get_time(i2c)
+      current_dow = getDow(i2c)
       for fade in fades:
-        if current_time > fade.start_time and current_time < fade.start_time + fade.duration:
+        if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow != 0 and current_dow != 6:
           start_fade(timer, fade, i2c)
           cur_fade = fade
           state = FADING
