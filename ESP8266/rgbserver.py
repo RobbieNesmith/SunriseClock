@@ -77,7 +77,7 @@ def main():
   cur_fade = None
   fades = []
   
-  morning_fade = Fade(time_to_seconds(6, 30, 0), millis_per_tick=10000)
+  morning_fade = Fade(time_to_seconds(6, 30, 0), millis_per_tick=10000, days_of_week=set([1,2,3,4]))
   morning_fade.add_color_stop(ColorStop(0,0,0), 90)
   morning_fade.add_color_stop(ColorStop(40,2,1), 90)
   morning_fade.add_color_stop(ColorStop(255,87,14), 180)
@@ -86,7 +86,7 @@ def main():
   morning_fade.add_color_stop(ColorStop(0,0,0),6)
   fades.append(morning_fade)
   
-  evening_fade = Fade(time_to_seconds(18,0,0), millis_per_tick=10000)
+  evening_fade = Fade(time_to_seconds(18,0,0), millis_per_tick=10000, days_of_week=set([0,1,2,3,4,5,6]))
   evening_fade.add_color_stop(ColorStop(0,0,0), 6)
   evening_fade.add_color_stop(ColorStop(255,87,14), 1080)
   evening_fade.add_color_stop(ColorStop(255,87,14), 360)
@@ -213,7 +213,7 @@ def main():
       current_time = get_time(i2c)
       current_dow = getDow(i2c)
       for fade in fades:
-        if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow != 0 and current_dow != 6:
+        if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow in fade.days_of_week:
           start_fade(timer, fade, i2c)
           cur_fade = fade
           state = FADING
