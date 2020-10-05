@@ -3,51 +3,15 @@ import uselect as select
 import utime
 from machine import Pin, I2C
 
+from ColorStop import ColorStop
+from Fade import Fade
+from Timer import Timer
+
 from ds3231 import *
 
 WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
-
-class Fade:
-  def __init__(self, start_time, millis_per_tick = 1000):
-    self.start_time = start_time
-    self.duration = 0
-    self.millis_per_tick = millis_per_tick
-    self.color_stops = []
-    self.ticks_per_stop = []
-  
-  def add_color_stop(self, cs, ticks):
-    self.color_stops.append(cs)
-    self.ticks_per_stop.append(ticks)
-    self.duration = self.duration + ticks * self.millis_per_tick / 1000
-  
-  def remove_color_stop(i):
-    del self.color_stops[i]
-    self.duration = self.duration - ticks * self.millis_per_tick / 1000
-    del self.ticks_per_stop[i]
-  
-class ColorStop:
-  def __init__(self, r, g, b):
-    self.r = r
-    self.g = g
-    self.b = b
-
-def lerp(cs1, cs2, pos):
-  if pos < 0:
-    pos = 0
-  elif pos > 1:
-    pos = 1
-  r = cs1.r * (1 - pos) + cs2.r * pos
-  g = cs1.g * (1 - pos) + cs2.g * pos
-  b = cs1.b * (1 - pos) + cs2.b * pos
-  return ColorStop(r, g, b)
-
-class Timer:
-  def __init__(self):
-    self.millis = 0
-    self.tick = 0
-    self.cur_stop = 0
 
 def render_color_stop(cs, i2c):
   cmd = bytearray([int(cs.r), int(cs.g), int(cs.b)])
