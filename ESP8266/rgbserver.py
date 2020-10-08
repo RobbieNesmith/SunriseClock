@@ -1,37 +1,18 @@
+import json
 import usocket as socket
 import uselect as select
 import utime
 from machine import Pin, I2C
+
+from ColorStop import ColorStop
+from Fade import Fade
+from Timer import Timer
 
 from ds3231 import *
 
 WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
-
-class Fade:
-  def __init__(self, start_time, millis_per_tick = 1000):
-    self.start_time = start_time
-    self.duration = 0
-    self.millis_per_tick = millis_per_tick
-    self.color_stops = []
-    self.ticks_per_stop = []
-  
-  def add_color_stop(self, cs, ticks):
-    self.color_stops.append(cs)
-    self.ticks_per_stop.append(ticks)
-    self.duration = self.duration + ticks * self.millis_per_tick / 1000
-  
-  def remove_color_stop(i):
-    del self.color_stops[i]
-    self.duration = self.duration - ticks * self.millis_per_tick / 1000
-    del self.ticks_per_stop[i]
-  
-class ColorStop:
-  def __init__(self, r, g, b):
-    self.r = r
-    self.g = g
-    self.b = b
 
 def lerp(cs1, cs2, pos):
   if pos < 0:
@@ -42,12 +23,6 @@ def lerp(cs1, cs2, pos):
   g = cs1.g * (1 - pos) + cs2.g * pos
   b = cs1.b * (1 - pos) + cs2.b * pos
   return ColorStop(r, g, b)
-
-class Timer:
-  def __init__(self):
-    self.millis = 0
-    self.tick = 0
-    self.cur_stop = 0
 
 def render_color_stop(cs, i2c):
   cmd = bytearray([int(cs.r), int(cs.g), int(cs.b)])
@@ -102,6 +77,14 @@ def get_query_params(addr):
         query_params[kv[0]] = kv[1]
   return query_params
 
+def deserialize_fade(fade_json):
+  start_time_json = fade_json["start_time"]
+  start_time_seconds = time_to_seconds(start_time_json["hours"], start_time_json["minutes"], start_time_json["seconds"])
+  fade = Fade(start_time_seconds, fade_json["millis_per_tick"], set(fade_json["days_of_week"]))
+  for color_stop in fade_json["stops"]:
+    fade.add_color_stop(ColorStop(color_stop["r"],color_stop["g"],color_stop["b"]), color_stop["t"]) 
+  return fade
+
 def main():
   i2c = I2C(sda=Pin(4), scl=Pin(5))
   i2c.writeto(8, bytearray([0,0,0]))
@@ -111,26 +94,11 @@ def main():
   server.listen(5)
   
   cur_fade = None
-  fades = []
-  
-  morning_fade = Fade(time_to_seconds(6, 30, 0), millis_per_tick=10000)
-  morning_fade.add_color_stop(ColorStop(0,0,0), 90)
-  morning_fade.add_color_stop(ColorStop(40,2,1), 90)
-  morning_fade.add_color_stop(ColorStop(255,87,14), 180)
-  morning_fade.add_color_stop(ColorStop(255,87,14), 6)
-  morning_fade.add_color_stop(ColorStop(0,0,0),6)
-  morning_fade.add_color_stop(ColorStop(0,0,0),6)
-  fades.append(morning_fade)
-  
-  evening_fade = Fade(time_to_seconds(18,0,0), millis_per_tick=10000)
-  evening_fade.add_color_stop(ColorStop(0,0,0), 6)
-  evening_fade.add_color_stop(ColorStop(255,87,14), 1080)
-  evening_fade.add_color_stop(ColorStop(255,87,14), 360)
-  evening_fade.add_color_stop(ColorStop(40,2,1), 360)
-  evening_fade.add_color_stop(ColorStop(3,0,4), 360)
-  evening_fade.add_color_stop(ColorStop(0,0,0), 6)
-  evening_fade.add_color_stop(ColorStop(0,0,0), 6)
-  fades.append(evening_fade)
+  fades = {}
+  with open("fades.json") as fade_file:
+    fades_json = json.load(fade_file)
+    for fade_id in fades_json["fades"]:
+      fades[fade_id] = deserialize_fade(fades_json["fades"][fade_id])
   
   manual_color = ColorStop(0,0,0)
   
@@ -248,8 +216,9 @@ def main():
     if state == WAITING_FOR_FADE:
       current_time = get_time(i2c)
       current_dow = getDow(i2c)
-      for fade in fades:
-        if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow != 0 and current_dow != 6:
+      for fade_id in fades:
+        fade = fades[fade_id]
+        if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow in fade.days_of_week:
           start_fade(timer, fade, i2c)
           cur_fade = fade
           state = FADING
