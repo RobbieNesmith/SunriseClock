@@ -223,6 +223,16 @@ def main():
         pass
     return DEFAULT_RESPONSE
 
+  @ws.route("/fades")
+  def get_fades(request_object):
+    resp = DEFAULT_RESPONSE.copy()
+    resp["headers"]["Content-type"] = "application/json"
+    if "id" in request_object["query_params"]:
+      resp["payload"] = json.dumps(get_fade_from_json_by_id(FADES_FILE, request_object["query_params"]["id"]))
+    else:
+      resp["payload"] = json.dumps(get_fade_timings_from_json(FADES_FILE))
+    return resp
+
   @ws.background_process
   async def rgb_background():
     while True:
