@@ -1,3 +1,4 @@
+import gc
 import json
 import uasyncio
 import usocket as socket
@@ -222,6 +223,12 @@ def main():
       except ValueError:
         pass
     return DEFAULT_RESPONSE
+
+  @ws.route("/getmemfree")
+  def get_memory_free(request_object):
+    resp = DEFAULT_RESPONSE.copy()
+    resp["payload"] = "Memory Free: {} bytes".format(gc.mem_free())
+    return resp
 
   @ws.route("/fades")
   def get_fades(request_object):
