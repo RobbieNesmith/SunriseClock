@@ -17,6 +17,7 @@ WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
 DEFAULT_RESPONSE = {"headers": {"Access-Control-Allow-Origin": "*"}}
+FADES_FILE = "fades.json"
 
 def lerp(cs1, cs2, pos):
   if pos < 0:
@@ -70,6 +71,27 @@ def deserialize_fade(fade_json):
     fade.add_color_stop(ColorStop(color_stop["r"],color_stop["g"],color_stop["b"]), color_stop["t"]) 
   return fade
 
+def get_fade_timings_from_json(filename):
+  fades = {}
+  with open(filename) as fade_file:
+    fades_json = json.load(fade_file)
+    for fade_id in fades_json["fades"]:
+      fade = fades_json["fades"][fade_id]
+      start_hms = fade["start_time"]
+      seconds_per_tick = fade["millis_per_tick"] / 1000
+      color_stops = fade["stops"]
+      start_time = time_to_seconds(start_hms["hours"], start_hms["minutes"], start_hms["seconds"])
+      end_time = start_time
+      for stop in color_stops:
+        end_time = end_time + stop["t"] * seconds_per_tick
+      fades[fade_id] = {"start_time": start_time, "end_time": end_time, "days_of_week": fade["days_of_week"]}
+  return fades
+
+def get_fade_from_json_by_id(filename, fade_id):
+  with open(filename) as fade_file:
+    fades_json = json.load(fade_file)
+    return fades_json["fades"][fade_id]
+
 def main():
   i2c = I2C(sda=Pin(4), scl=Pin(5))
   i2c.writeto(8, bytearray([0,0,0]))
@@ -77,11 +99,7 @@ def main():
   ws = ESP8266WebServer()
 
   cur_fade = None
-  fades = {}
-  with open("fades.json") as fade_file:
-    fades_json = json.load(fade_file)
-    for fade_id in fades_json["fades"]:
-      fades[fade_id] = deserialize_fade(fades_json["fades"][fade_id])
+  fades = get_fade_timings_from_json(FADES_FILE)
 
   manual_color = ColorStop(0,0,0)
 
@@ -213,9 +231,9 @@ def main():
         current_dow = getDow(i2c)
         for fade_id in fades:
           fade = fades[fade_id]
-          if current_time > fade.start_time and current_time < fade.start_time + fade.duration and current_dow in fade.days_of_week:
-            start_fade(timer, fade, i2c)
-            cur_fade = fade
+          if current_time > fade["start_time"] and current_time < fade["end_time"] and current_dow in fade["days_of_week"]:
+            cur_fade = deserialize_fade(get_fade_from_json_by_id(FADES_FILE, fade_id))
+            start_fade(timer, cur_fade, i2c)
             context["state"] = FADING
       elif context["state"] == FADING:
         if cur_fade == None:
