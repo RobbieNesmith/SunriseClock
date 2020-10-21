@@ -17,8 +17,10 @@ from ds3231 import *
 WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
-DEFAULT_RESPONSE = {"headers": {"Access-Control-Allow-Origin": "*"}}
 FADES_FILE = "fades.json"
+
+def get_default_response():
+  return {"headers": {"Access-Control-Allow-Origin": "*"}}
 
 def lerp(cs1, cs2, pos):
   if pos < 0:
@@ -132,17 +134,17 @@ def main():
         pass
     cmd = bytearray([manual_color.r, manual_color.g, manual_color.b])
     i2c.writeto(8, cmd)
-    return DEFAULT_RESPONSE
+    return get_default_response()
 
   @ws.route("/auto")
   def auto_route(request_object):
     context["state"] = WAITING_FOR_FADE
     i2c.writeto(8, bytearray([0,0,0]))
-    return DEFAULT_RESPONSE
+    return get_default_response()
 
   @ws.route("/getstate")
   def get_state_route(request_object):
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = ["WAITING_FOR_FADE","FADING","MANUAL_MODE"][context["state"]]
     return resp
 
@@ -154,19 +156,19 @@ def main():
       color = "#000000"
     elif context["state"] == FADING:
       color = color_to_hex(get_current_color(timer, cur_fade))
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = color
     return resp
 
   @ws.route("/getmanualcolor")
   def get_manual_color_route(request_object):
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = color_to_hex(manual_color)
     return resp
 
   @ws.route("/getdow")
   def get_dow_route(request_object):
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = "%d" % (getDow(i2c))
     return resp
 
@@ -175,7 +177,7 @@ def main():
     qp = request_object["query_params"]
     if "dow" in qp:
       setDow(i2c, int(qp["dow"]))
-    return DEFAULT_RESPONSE
+    return get_default_response()
 
   @ws.route("/getdatetime")
   def get_datetime_route(request_object):
@@ -185,7 +187,7 @@ def main():
     hour = getHour(i2c)
     minute = getMinute(i2c)
     second = getSecond(i2c)
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = "%04d-%02d-%02dT%02d:%02d:%02d" % (2000 + year, month, day, hour, minute, second)
     return resp
 
@@ -222,17 +224,17 @@ def main():
         setSecond(i2c, int(new_datetime["second"]))
       except ValueError:
         pass
-    return DEFAULT_RESPONSE
+    return get_default_response()
 
   @ws.route("/getmemfree")
   def get_memory_free(request_object):
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["payload"] = "Memory Free: {} bytes".format(gc.mem_free())
     return resp
 
   @ws.route("/fades")
   def get_fades(request_object):
-    resp = DEFAULT_RESPONSE.copy()
+    resp = get_default_response()
     resp["headers"]["Content-type"] = "application/json"
     if "id" in request_object["query_params"]:
       resp["payload"] = json.dumps(get_fade_from_json_by_id(FADES_FILE, request_object["query_params"]["id"]))
