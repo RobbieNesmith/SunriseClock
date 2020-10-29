@@ -18,6 +18,8 @@ WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
 FADES_FILE = "fades.json"
+RECENT_COLORS_FILE = "recents.json"
+MAX_RECENT_COLORS = 10
 
 def get_default_response():
   return {"headers": {"Access-Control-Allow-Origin": "*"}}
@@ -95,6 +97,23 @@ def get_fade_from_json_by_id(filename, fade_id):
     fades_json = json.load(fade_file)
     return fades_json["fades"][fade_id]
 
+def get_recent_colors(filename):
+  try:
+    with open(filename) as recent_colors_file:
+      return json.load(recent_colors_file)
+  except:
+    return []
+
+def add_recent_color(filename, color):
+  hex_color = color_to_hex(color)
+  recent_colors = get_recent_colors(filename)
+  if hex_color not in recent_colors:
+    recent_colors.append(hex_color)
+  if len(recent_colors) > MAX_RECENT_COLORS:
+    recent_colors = recent_colors[-MAX_RECENT_COLORS:]
+  with open(filename, "w") as recent_colors_file:
+    json.dump(recent_colors, recent_colors_file)
+
 def main():
   i2c = I2C(sda=Pin(4), scl=Pin(5))
   i2c.writeto(8, bytearray([0,0,0]))
@@ -134,6 +153,7 @@ def main():
         pass
     cmd = bytearray([manual_color.r, manual_color.g, manual_color.b])
     i2c.writeto(8, cmd)
+    add_recent_color(RECENT_COLORS_FILE, manual_color)
     return get_default_response()
 
   @ws.route("/auto")
@@ -240,6 +260,13 @@ def main():
       resp["payload"] = json.dumps(get_fade_from_json_by_id(FADES_FILE, request_object["query_params"]["id"]))
     else:
       resp["payload"] = json.dumps(get_fade_timings_from_json(FADES_FILE))
+    return resp
+
+  @ws.route("/recent_colors")
+  def get_recent_colors_route(request_object):
+    resp = get_default_response()
+    resp["headers"]["Content-type"] = "application/json"
+    resp["payload"] = json.dumps(get_recent_colors(RECENT_COLORS_FILE))
     return resp
 
   @ws.background_process
