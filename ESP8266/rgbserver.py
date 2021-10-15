@@ -17,9 +17,14 @@ from ds3231 import *
 WAITING_FOR_FADE = 0
 FADING = 1
 MANUAL_MODE = 2
+SUNSET_MODE = 3
 FADES_FILE = "fades.json"
 RECENT_COLORS_FILE = "recents.json"
 MAX_RECENT_COLORS = 10
+
+SUNSET_FADE_JSON = "sunset.json"
+
+sunset_fade = {}
 
 def get_default_response():
   return {"headers": {"Access-Control-Allow-Origin": "*"}}
@@ -122,8 +127,12 @@ def main():
 
   cur_fade = None
   fades = get_fade_timings_from_json(FADES_FILE)
+  with open(SUNSET_FADE_JSON) as fade_file:
+    sunset_fade = deserialize_fade(json.load(fade_file))
 
   manual_color = ColorStop(0,0,0)
+
+  sunset_start_time = 0
 
   timer = Timer()
 
@@ -162,10 +171,17 @@ def main():
     i2c.writeto(8, bytearray([0,0,0]))
     return get_default_response()
 
+  @ws.route("/sunset")
+  def sunset_route(request_object):
+    context["state"] = SUNSET_MODE
+    sunset_fade.start_time = get_time(i2c)
+    start_fade(timer, sunset_fade, i2c)
+    return get_default_response()
+
   @ws.route("/getstate")
   def get_state_route(request_object):
     resp = get_default_response()
-    resp["payload"] = ["WAITING_FOR_FADE","FADING","MANUAL_MODE"][context["state"]]
+    resp["payload"] = ["WAITING_FOR_FADE","FADING","MANUAL_MODE", "SUNSET_MODE"][context["state"]]
     return resp
 
   @ws.route("/getcurrentcolor")
@@ -291,6 +307,12 @@ def main():
       elif context["state"] == MANUAL_MODE:
         # set the color manually
         pass
+      elif context["state"] == SUNSET_MODE:
+        current_time = get_time(i2c)
+        if timer.cur_stop >= len(sunset_fade.color_stops) - 1:
+          context["state"] = WAITING_FOR_FADE
+        else:
+          increment_fade(timer, sunset_fade, i2c)
       await uasyncio.sleep(1)
 
   ws.run()
