@@ -37,10 +37,11 @@ def lerp(cs1, cs2, pos):
   r = cs1.r * (1 - pos) + cs2.r * pos
   g = cs1.g * (1 - pos) + cs2.g * pos
   b = cs1.b * (1 - pos) + cs2.b * pos
-  return ColorStop(r, g, b)
+  w = cs1.w * (1 - pos) + cs2.w * pos
+  return ColorStop(r, g, b, w)
 
 def render_color_stop(cs, i2c):
-  cmd = bytearray([int(cs.r), int(cs.g), int(cs.b)])
+  cmd = bytearray([int(cs.r), int(cs.g), int(cs.b), int(cs.w)])
   i2c.writeto(8, cmd)
 
 def start_fade(timer, fade, i2c):
@@ -78,7 +79,11 @@ def deserialize_fade(fade_json):
   start_time_seconds = time_to_seconds(start_time_json["hours"], start_time_json["minutes"], start_time_json["seconds"])
   fade = Fade(start_time_seconds, fade_json["millis_per_tick"], set(fade_json["days_of_week"]))
   for color_stop in fade_json["stops"]:
-    fade.add_color_stop(ColorStop(color_stop["r"],color_stop["g"],color_stop["b"]), color_stop["t"]) 
+    r = color_stop["r"] if "r" in color_stop else 0
+    g = color_stop["g"] if "g" in color_stop else 0
+    b = color_stop["b"] if "b" in color_stop else 0
+    w = color_stop["w"] if "w" in color_stop else 0
+    fade.add_color_stop(ColorStop(r,g,b,w), color_stop["t"]) 
   return fade
 
 def get_fade_timings_from_json(filename):
@@ -121,7 +126,8 @@ def add_recent_color(filename, color):
 
 def main():
   i2c = I2C(sda=Pin(4), scl=Pin(5))
-  i2c.writeto(8, bytearray([0,0,0]))
+  i2c.writeto(8, bytearray([0,0,0,0]))
+  i2c.writeto(8, bytearray([0,0,0,0]))
   
   ws = ESP8266WebServer()
 
@@ -130,7 +136,7 @@ def main():
   with open(SUNSET_FADE_JSON) as fade_file:
     sunset_fade = deserialize_fade(json.load(fade_file))
 
-  manual_color = ColorStop(0,0,0)
+  manual_color = ColorStop(0,0,0,0)
 
   sunset_start_time = 0
 
@@ -144,6 +150,7 @@ def main():
     manual_color.r = 0
     manual_color.g = 0
     manual_color.b = 0
+    manual_color.w = 0
     qp = request_object["query_params"]
     if "red" in qp:
       try:
@@ -160,7 +167,12 @@ def main():
         manual_color.b = int(qp["blue"])
       except ValueError:
         pass
-    cmd = bytearray([manual_color.r, manual_color.g, manual_color.b])
+    if "white" in qp:
+      try:
+        manual_color.w = int(qp["white"])
+      except ValueError:
+        pass
+    cmd = bytearray([manual_color.r, manual_color.g, manual_color.b, manual_color.w])
     i2c.writeto(8, cmd)
     add_recent_color(RECENT_COLORS_FILE, manual_color)
     return get_default_response()
@@ -168,7 +180,7 @@ def main():
   @ws.route("/auto")
   def auto_route(request_object):
     context["state"] = WAITING_FOR_FADE
-    i2c.writeto(8, bytearray([0,0,0]))
+    i2c.writeto(8, bytearray([0,0,0,0]))
     return get_default_response()
 
   @ws.route("/sunset")
