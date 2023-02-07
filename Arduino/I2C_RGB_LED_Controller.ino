@@ -15,6 +15,12 @@ void setup() {
   Serial.begin(9600);
   Wire.begin(8);
   Wire.onReceive(receiveEvent);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  pinMode(WHITE_PIN, OUTPUT);
+  pinMode(AUX1_PIN, OUTPUT);
+  pinMode(AUX2_PIN, OUTPUT);
 }
 
 void loop() {
