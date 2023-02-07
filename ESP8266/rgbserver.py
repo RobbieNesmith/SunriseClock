@@ -71,8 +71,8 @@ def increment_fade(timer, fade, i2c):
 def time_to_seconds(hour, minute, second):
   return hour * 3600 + minute * 60 + second
 
-def color_to_hex(color):
-  return "#%02x%02x%02x" % (int(color.r), int(color.g), int(color.b))
+def serialize_color(color):
+  return json.dumps(color.__dict__)
 
 def deserialize_fade(fade_json):
   start_time_json = fade_json["start_time"]
@@ -115,10 +115,10 @@ def get_recent_colors(filename):
     return []
 
 def add_recent_color(filename, color):
-  hex_color = color_to_hex(color)
+  color_serialized = serialize_color(color)
   recent_colors = get_recent_colors(filename)
-  if hex_color not in recent_colors:
-    recent_colors.append(hex_color)
+  if color_serialized not in recent_colors:
+    recent_colors.append(color_serialized)
   if len(recent_colors) > MAX_RECENT_COLORS:
     recent_colors = recent_colors[-MAX_RECENT_COLORS:]
   with open(filename, "w") as recent_colors_file:
@@ -199,11 +199,11 @@ def main():
   @ws.route("/getcurrentcolor")
   def get_current_color_route(request_object):
     if context["state"] == MANUAL_MODE:
-      color = color_to_hex(manual_color)
+      color = serialize_color(manual_color)
     elif context["state"] == WAITING_FOR_FADE:
-      color = "#000000"
+      color = '{"r":0,"g":0,"b":0,"w":0}'
     elif context["state"] == FADING:
-      color = color_to_hex(get_current_color(timer, cur_fade))
+      color = serialize_color(get_current_color(timer, cur_fade))
     resp = get_default_response()
     resp["payload"] = color
     return resp
@@ -211,7 +211,7 @@ def main():
   @ws.route("/getmanualcolor")
   def get_manual_color_route(request_object):
     resp = get_default_response()
-    resp["payload"] = color_to_hex(manual_color)
+    resp["payload"] = serialize_color(manual_color)
     return resp
 
   @ws.route("/getdow")
